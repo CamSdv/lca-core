@@ -7,7 +7,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -59,15 +61,38 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponseDTO> handleGeneral(Exception ex) {
+    public ResponseEntity<?> handleGeneral(Exception ex) {
 
-        ErrorResponseDTO error = new ErrorResponseDTO(
-                "Internal server error",
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                LocalDateTime.now(),
-                null
-        );
+        ex.printStackTrace();
 
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(
+                        Map.of(
+                                "message", "Internal server error",
+                                "error", ex.getMessage() != null ? ex.getMessage() : "Unexpected error"
+                        )
+                );
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<?> handleJsonParseError(
+            org.springframework.http.converter.HttpMessageNotReadableException ex
+    ) {
+
+        String message = "Invalid request body";
+
+        Throwable cause = ex.getCause();
+
+        if (cause instanceof com.fasterxml.jackson.databind.exc.InvalidFormatException ife) {
+
+            String field = ife.getPath().get(0).getFieldName();
+            Object value = ife.getValue();
+
+            message = "Invalid value '" + value + "' for field '" + field + "'. Allowed values: " + Arrays.toString(ife.getTargetType().getEnumConstants());
+        }
+
+        return ResponseEntity
+                .badRequest()
+                .body(message);
     }
 }

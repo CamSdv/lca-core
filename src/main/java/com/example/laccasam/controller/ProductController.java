@@ -6,7 +6,6 @@ import com.example.laccasam.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -22,7 +21,17 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<ProductResponseDTO> findAll() {
-        return service.findAll();
+    public List<ProductResponseDTO> getAllActive() {
+        return service.findAllActive();
+    }
+
+    @PutMapping("/{id}")
+    public ProductResponseDTO update( @PathVariable Long id, @Valid @RequestBody ProductRequestDTO dto) {
+        return service.update(id, dto);
+    }
+
+    @PatchMapping("/{id}/toggle")
+    public void toggle(@PathVariable Long id) {
+        service.toggleActive(id);
     }
 }

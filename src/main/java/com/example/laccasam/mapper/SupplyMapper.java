@@ -7,19 +7,30 @@ import com.example.laccasam.entity.Supply;
 public class SupplyMapper {
 
     public static Supply toEntity(SupplyRequestDTO dto) {
-        Supply supply = new Supply();
-        supply.setName(dto.getName());
-        supply.setStock(dto.getStock());
-        return supply;
+
+        Supply s = new Supply();
+
+        s.setType(dto.getType());
+        s.setCategory(dto.getCategory());
+        s.setPresentation(dto.getPresentation().trim().toUpperCase());
+        s.setStock(dto.getStock());
+        s.setActive(true);
+
+        return s;
     }
 
-    public static SupplyResponseDTO toResponse(Supply entity) {
+    public static SupplyResponseDTO toResponse(Supply s) {
+
         SupplyResponseDTO dto = new SupplyResponseDTO();
-        dto.setId(entity.getId());
-        dto.setName(entity.getName());
-        dto.setStock(entity.getStock());
-        dto.setCreatedAt(entity.getCreatedAt());
-        dto.setUpdatedAt(entity.getUpdatedAt());
+
+        dto.setId(s.getId());
+        dto.setType(s.getType());
+        dto.setCategory(s.getCategory());
+        dto.setPresentation(s.getPresentation());
+        dto.setStock(s.getStock());
+        dto.setCreatedAt(s.getCreatedAt());
+        dto.setUpdatedAt(s.getUpdatedAt());
+
         return dto;
     }
 }

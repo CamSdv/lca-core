@@ -1,6 +1,5 @@
 package com.example.laccasam.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,18 +7,25 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
+@Table(
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"product_id", "supply_id"})
+        }
+)
 public class ProductSupply extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "supply_id", nullable = false)
     private Supply supply;
 
-    private Integer quantityRequired; // 👈 clave en tu caso
+    @Column(nullable = false)
+    private double quantityRequired;
 }

@@ -15,6 +15,7 @@ public class SellerMapper {
         SellerResponseDTO dto = new SellerResponseDTO();
         dto.setId(entity.getId());
         dto.setName(entity.getName());
+        dto.setStatus(entity.getActive());
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setUpdatedAt(entity.getUpdatedAt());
         return dto;

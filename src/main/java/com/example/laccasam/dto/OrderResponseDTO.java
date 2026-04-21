@@ -16,5 +16,6 @@ public class OrderResponseDTO {
     private String customerName;
     private String sellerName;
     private List<OrderItemResponseDTO> items;
+    private Double total;
 
 }

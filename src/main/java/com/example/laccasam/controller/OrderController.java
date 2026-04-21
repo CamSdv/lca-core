@@ -1,12 +1,9 @@
 package com.example.laccasam.controller;
 
-import com.example.laccasam.dto.OrderItemDTO;
 import com.example.laccasam.dto.OrderItemWeightDTO;
 import com.example.laccasam.dto.OrderRequestDTO;
 import com.example.laccasam.dto.OrderResponseDTO;
 import com.example.laccasam.entity.Order;
-import com.example.laccasam.entity.OrderItem;
-import com.example.laccasam.repository.OrderRepository;
 import com.example.laccasam.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +24,7 @@ public class OrderController {
     }
 
     @PutMapping("/{id}/weights")
-    public Order updateWeights(@PathVariable Long id, @Valid @RequestBody List<@Valid OrderItemWeightDTO> items) {
+    public OrderResponseDTO updateWeights(@PathVariable Long id, @Valid @RequestBody List<@Valid OrderItemWeightDTO> items) {
         return service.updateWeights(id, items);
     }
 
@@ -35,4 +32,15 @@ public class OrderController {
     public OrderResponseDTO confirm(@PathVariable Long id) {
         return service.confirm(id);
     }
+
+    @GetMapping("/batch/current")
+    public List<OrderResponseDTO> getCurrentBatchOrders() {
+        return service.getCurrentBatchOrders();
+    }
+
+    @GetMapping
+    public List<OrderResponseDTO> getAll() {
+        return service.getAll();
+    }
+
 }

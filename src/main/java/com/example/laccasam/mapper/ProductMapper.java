@@ -13,8 +13,9 @@ public class ProductMapper {
         product.setName(dto.getName());
         product.setCategory(dto.getCategory());
         product.setPresentation(dto.getPresentation());
-        product.setPricingType(PricingType.valueOf(dto.getPricingType().toString()));
+        product.setPricingType(dto.getPricingType());
         product.setPrice(dto.getPrice());
+        product.setActive(true);
 
         return product;
     }
@@ -25,10 +26,11 @@ public class ProductMapper {
 
         dto.setId(product.getId());
         dto.setName(product.getName());
-        dto.setCategory(product.getCategory());
+        dto.setCategory(product.getCategory().name());
+        dto.setPricingType(product.getPricingType().name());
         dto.setPresentation(product.getPresentation());
-        dto.setPricingType(String.valueOf(product.getPricingType()));
         dto.setPrice(product.getPrice());
+        dto.setActive(product.getActive());
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         return dto;

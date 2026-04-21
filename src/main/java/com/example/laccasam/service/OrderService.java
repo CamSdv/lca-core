@@ -1,18 +1,19 @@
 package com.example.laccasam.service;
-import com.example.laccasam.dto.OrderItemCreateDTO;
-import com.example.laccasam.dto.OrderItemWeightDTO;
-import com.example.laccasam.dto.OrderRequestDTO;
-import com.example.laccasam.dto.OrderResponseDTO;
+import com.example.laccasam.dto.*;
 import com.example.laccasam.entity.*;
+import com.example.laccasam.enums.BatchStatus;
+import com.example.laccasam.enums.MovementType;
 import com.example.laccasam.enums.OrderStatus;
+import com.example.laccasam.enums.PricingType;
 import com.example.laccasam.exception.BadRequestException;
 import com.example.laccasam.exception.NotFoundException;
 import com.example.laccasam.mapper.OrderMapper;
-import com.example.laccasam.mapper.OrderResponseMapper;
 import com.example.laccasam.repository.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -35,13 +36,24 @@ public class OrderService {
     @Autowired
     private SupplyRepository supplyRepository;
 
+    @Autowired
+    private BatchService batchService;
+
+    @Autowired
+    private InventoryMovementRepository inventoryMovementRepository;
+
     public OrderResponseDTO create(OrderRequestDTO dto) {
 
-        if (dto.getItems() == null || dto.getItems().isEmpty()) {
-            throw new NotFoundException("Order must have items");
+        Batch batch = batchService.getOrCreateTodayBatch();
+
+        if (batch.getStatus() == BatchStatus.CLOSED) {
+            throw new BadRequestException("Orders are closed for today");
         }
 
-        // 🟢 1. Resolver cliente (nuevo o existente)
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+            throw new BadRequestException("Order must have items");
+        }
+
         Customer customer;
 
         if (dto.getCustomer() == null) {
@@ -50,13 +62,11 @@ public class OrderService {
 
         if (dto.getCustomer().getId() != null) {
 
-            // 🟢 Cliente existente
             customer = customerRepository.findById(dto.getCustomer().getId())
                     .orElseThrow(() -> new NotFoundException("Customer not found"));
 
         } else {
 
-            // 🟢 Cliente nuevo
             if (dto.getCustomer().getName() == null || dto.getCustomer().getName().isBlank()) {
                 throw new BadRequestException("Customer name is required");
             }
@@ -72,34 +82,47 @@ public class OrderService {
             customer = customerRepository.save(customer);
         }
 
-        // 🟢 2. Seller
+
         Seller seller = sellerRepository.findById(dto.getSellerId())
                 .orElseThrow(() -> new NotFoundException("Seller not found"));
 
-        // 🟢 3. Productos
         List<Product> products = productRepository.findAllById(
                 dto.getItems().stream()
                         .map(OrderItemCreateDTO::getProductId)
                         .toList()
         );
 
-        // 🟢 4. Mapear
+        if (products.size() != dto.getItems().size()) {
+            throw new NotFoundException("One or more products not found");
+        }
+
         Order order = OrderMapper.toEntity(dto, customer, seller, products);
-
-
-
+        order.setBatch(batch);
+        order.setStatus(OrderStatus.CREATED);
         order = repository.save(order);
 
         return OrderMapper.toResponse(order);
     }
 
-    public Order updateWeights(Long id, List<OrderItemWeightDTO> itemsDto) {
+    public OrderResponseDTO updateWeights(Long id, List<OrderItemWeightDTO> itemsDto) {
 
         Order order = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
 
+        if (OrderStatus.CONFIRMED.equals(order.getStatus())) {
+            throw new BadRequestException("Cannot modify confirmed order");
+        }
+
         if (!OrderStatus.CREATED.equals(order.getStatus())) {
-            throw new NotFoundException("Only CREATED orders can be adjusted");
+            throw new BadRequestException("Only CREATED orders can be adjusted");
+        }
+
+        List<OrderItem> weightItems = order.getItems().stream()
+                .filter(i -> i.getProduct().getPricingType() == PricingType.WEIGHT)
+                .toList();
+
+        if (itemsDto.size() != weightItems.size()) {
+            throw new BadRequestException("Only WEIGHT items must be provided");
         }
 
         Map<Long, Double> weightsMap = itemsDto.stream()
@@ -108,15 +131,33 @@ public class OrderService {
                         OrderItemWeightDTO::getFinalWeight
                 ));
 
+        if (!weightsMap.keySet().containsAll(
+                order.getItems().stream().map(OrderItem::getId).toList()
+        )) {
+            throw new BadRequestException("Some items are missing");
+        }
+
         order.getItems().forEach(item -> {
-            if (weightsMap.containsKey(item.getId())) {
+
+            Product product = item.getProduct();
+
+            if (PricingType.WEIGHT.equals(product.getPricingType())) {
+
+                if (!weightsMap.containsKey(item.getId())) {
+                    throw new BadRequestException("Weight required for item " + item.getId());
+                }
+
                 item.setFinalWeight(weightsMap.get(item.getId()));
+
+            } else {
+                item.setFinalWeight(null);
             }
         });
 
         order.setStatus(OrderStatus.ADJUSTED);
 
-        return repository.save(order);
+        Order saved = repository.save(order);
+        return OrderMapper.toResponse(saved);
     }
 
     @Transactional
@@ -125,14 +166,20 @@ public class OrderService {
         Order order = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
 
-        if (!OrderStatus.ADJUSTED.equals(order.getStatus())) {
-            throw new NotFoundException("Order must be ADJUSTED before confirmation");
+        boolean requiresAdjustment = requiresWeightAdjustment(order);
+
+        if (requiresAdjustment && !OrderStatus.ADJUSTED.equals(order.getStatus())) {
+            throw new BadRequestException("Order must be ADJUSTED before confirmation");
+        }
+
+        if (!requiresAdjustment && !OrderStatus.CREATED.equals(order.getStatus())) {
+            throw new BadRequestException("Invalid order state for UNIT products");
         }
 
         order.getItems().forEach(item -> {
 
-            if (item.getFinalWeight() == null) {
-                throw new NotFoundException("Final weight missing for item " + item.getId());
+            if (item.getProduct().getPricingType() == PricingType.WEIGHT && item.getFinalWeight() == null) {
+                throw new BadRequestException("Final weight required for WEIGHT products");
             }
 
             Product product = item.getProduct();
@@ -141,14 +188,27 @@ public class OrderService {
 
                 Supply supply = ps.getSupply();
 
-                double totalUsed = ps.getQuantityRequired() * item.getFinalWeight();
+                double multiplier = PricingType.WEIGHT.equals(product.getPricingType())
+                        ? item.getFinalWeight()
+                        : item.getQuantity();
+
+                double totalUsed = ps.getQuantityRequired() * multiplier;
 
                 if (supply.getStock() < totalUsed) {
-                    throw new NotFoundException("Not enough stock for: " + supply.getName());
+                    throw new BadRequestException("Not enough stock for " + supply.getPresentation());
                 }
 
                 supply.setStock(supply.getStock() - totalUsed);
-                supplyRepository.save(supply);
+
+                InventoryMovement movement = new InventoryMovement();
+                movement.setSupply(supply);
+                movement.setQuantity(totalUsed);
+                movement.setType(MovementType.OUT);
+                movement.setDate(LocalDateTime.now());
+                movement.setReference(order.getId());
+
+                inventoryMovementRepository.save(movement);
+
             });
         });
 
@@ -157,6 +217,27 @@ public class OrderService {
         Order saved = repository.save(order);
 
         return OrderMapper.toResponse(saved);
+    }
+
+    public List<OrderResponseDTO> getCurrentBatchOrders() {
+
+        Batch batch = batchService.getOrCreateTodayBatch();
+
+        return batch.getOrders().stream()
+                .map(OrderMapper::toResponse)
+                .toList();
+    }
+
+    private boolean requiresWeightAdjustment(Order order) {
+        return order.getItems().stream()
+                .anyMatch(item -> item.getProduct().getPricingType() == PricingType.WEIGHT);
+    }
+
+    public List<OrderResponseDTO> getAll() {
+        return repository.findAll()
+                .stream()
+                .map(OrderMapper::toResponse)
+                .toList();
     }
 
 }

@@ -27,4 +27,5 @@ public class OrderItem extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "order_id")
     private Order order;
+
 }

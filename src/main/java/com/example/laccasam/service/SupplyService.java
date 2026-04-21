@@ -3,12 +3,12 @@ package com.example.laccasam.service;
 import com.example.laccasam.dto.SupplyRequestDTO;
 import com.example.laccasam.dto.SupplyResponseDTO;
 import com.example.laccasam.entity.Supply;
+import com.example.laccasam.exception.BadRequestException;
 import com.example.laccasam.exception.NotFoundException;
 import com.example.laccasam.mapper.SupplyMapper;
 import com.example.laccasam.repository.SupplyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,24 +20,41 @@ public class SupplyService {
 
     public SupplyResponseDTO create(SupplyRequestDTO dto) {
 
-        if (dto.getName() == null || dto.getName().isBlank()) {
-            throw new NotFoundException("Supply name is required");
-        }
+        String presentation = dto.getPresentation().trim().toUpperCase();
 
-        if (dto.getStock() == null || dto.getStock() < 0) {
-            throw new NotFoundException("Stock must be >= 0");
-        }
+        repository.findByTypeAndCategoryAndPresentation(
+                dto.getType(),
+                dto.getCategory(),
+                presentation
+        ).ifPresent(s -> {
+            throw new BadRequestException("Supply already exists");
+        });
 
         Supply supply = SupplyMapper.toEntity(dto);
-        Supply saved = repository.save(supply);
 
-        return SupplyMapper.toResponse(saved);
+        supply = repository.save(supply);
+
+        return SupplyMapper.toResponse(supply);
     }
 
     public List<SupplyResponseDTO> findAll() {
-        return repository.findAll()
+        return repository.findAllByOrderByTypeAscCategoryAsc()
                 .stream()
                 .map(SupplyMapper::toResponse)
-                .collect(Collectors.toList());
+                .toList();
+    }
+
+    public SupplyResponseDTO updateStock(Long id, Double stock) {
+
+        Supply s = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Supply not found"));
+
+        if (stock < 0) {
+            throw new BadRequestException("Stock cannot be negative");
+        }
+
+        s.setStock(stock);
+
+        return SupplyMapper.toResponse(repository.save(s));
     }
 }

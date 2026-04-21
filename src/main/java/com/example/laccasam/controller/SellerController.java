@@ -24,4 +24,15 @@ public class SellerController {
     public List<SellerResponseDTO> findAll() {
         return service.findAll();
     }
+
+    @PutMapping("/{id}/status/{status}")
+    public void updateStatus(@PathVariable Long id,@PathVariable Boolean status) {
+        service.updateStatus(id, status);
+    }
+
+    @GetMapping("/status/{status}")
+    public List<SellerResponseDTO> findAllByStatus( @PathVariable Boolean status) {
+        return service.findAllByStatus(status);
+    }
+
 }

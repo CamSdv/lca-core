@@ -14,6 +14,7 @@ public class ProductResponseDTO {
     private String presentation;
     private String pricingType;
     private Double price;
+    private boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
