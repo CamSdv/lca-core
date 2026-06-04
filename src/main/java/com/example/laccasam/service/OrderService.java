@@ -39,9 +39,6 @@ public class OrderService {
     @Autowired
     private BatchService batchService;
 
-    @Autowired
-    private InventoryMovementRepository inventoryMovementRepository;
-
     public OrderResponseDTO create(OrderRequestDTO dto) {
 
         Batch batch = batchService.getOrCreateTodayBatch();
@@ -199,15 +196,6 @@ public class OrderService {
                 }
 
                 supply.setStock(supply.getStock() - totalUsed);
-
-                InventoryMovement movement = new InventoryMovement();
-                movement.setSupply(supply);
-                movement.setQuantity(totalUsed);
-                movement.setType(MovementType.OUT);
-                movement.setDate(LocalDateTime.now());
-                movement.setReference(order.getId());
-
-                inventoryMovementRepository.save(movement);
 
             });
         });
