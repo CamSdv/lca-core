@@ -20,7 +20,4 @@ import lombok.Setter;
         @NotBlank
         private String presentation;
 
-        @NotNull
-        @Positive
-        private Double stock;
     }

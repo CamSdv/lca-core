@@ -191,11 +191,6 @@ public class OrderService {
 
                 double totalUsed = ps.getQuantityRequired() * multiplier;
 
-                if (supply.getStock() < totalUsed) {
-                    throw new BadRequestException("Not enough stock for " + supply.getPresentation());
-                }
-
-                supply.setStock(supply.getStock() - totalUsed);
 
             });
         });

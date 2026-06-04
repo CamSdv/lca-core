@@ -14,7 +14,6 @@ public class SupplyResponseDTO {
     private SupplyType type;
     private SupplyCategory category;
     private String presentation;
-    private Double stock;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

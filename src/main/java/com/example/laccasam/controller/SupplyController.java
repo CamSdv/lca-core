@@ -26,11 +26,4 @@ public class SupplyController {
         return service.findAll();
     }
 
-    @PatchMapping("/{id}/stock")
-    public ResponseEntity<SupplyResponseDTO> updateStock(
-            @PathVariable Long id,
-            @RequestParam Double stock
-    ) {
-        return ResponseEntity.ok(service.updateStock(id, stock));
-    }
 }

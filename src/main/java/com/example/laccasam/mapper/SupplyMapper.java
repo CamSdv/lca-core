@@ -13,7 +13,6 @@ public class SupplyMapper {
         s.setType(dto.getType());
         s.setCategory(dto.getCategory());
         s.setPresentation(dto.getPresentation().trim().toUpperCase());
-        s.setStock(dto.getStock());
         s.setActive(true);
 
         return s;
@@ -27,7 +26,6 @@ public class SupplyMapper {
         dto.setType(s.getType());
         dto.setCategory(s.getCategory());
         dto.setPresentation(s.getPresentation());
-        dto.setStock(s.getStock());
         dto.setCreatedAt(s.getCreatedAt());
         dto.setUpdatedAt(s.getUpdatedAt());
 

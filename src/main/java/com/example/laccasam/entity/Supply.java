@@ -33,8 +33,6 @@ public class Supply extends BaseEntity {
     @Column(nullable = false)
     private String presentation; // 500G, 1L, etc
 
-    @Column(nullable = false)
-    private double stock;
 
     @Column(nullable = false)
     private Boolean active = true;

@@ -44,17 +44,4 @@ public class SupplyService {
                 .toList();
     }
 
-    public SupplyResponseDTO updateStock(Long id, Double stock) {
-
-        Supply s = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Supply not found"));
-
-        if (stock < 0) {
-            throw new BadRequestException("Stock cannot be negative");
-        }
-
-        s.setStock(stock);
-
-        return SupplyMapper.toResponse(repository.save(s));
-    }
 }
